@@ -1,0 +1,20 @@
+﻿dimension,columna_afectada,problema,cantidad_afectada,porcentaje_afectado,severidad
+Consistencia,ciudad,Variantes de mayusc/minusc y codificacion (19 valores -> 6 ciudades reales),388,62.58,Alta
+Consistencia,categoria_producto,Variantes y sinonimos (17 valores -> 6 categorias reales),362,58.39,Alta
+Consistencia,nivel_satisfaccion,Variantes de mayusc/minusc (8 valores -> 3 niveles reales),347,55.97,Alta
+Exactitud,fecha_compra,Fecha de compra posterior a hoy (regla de dominio: no puede ser futura),131,21.13,Alta
+Completitud,correo,Correo electronico faltante,104,16.77,Alta
+Unicidad,id_pedido,id_pedido repetido: no funciona como llave primaria (20 pedidos duplicados),40,6.45,Alta
+Exactitud,unidades,Unidades negativas o con valores centinela (9999 / 5000),29,4.68,Alta
+Validez,fecha_compra,Formato de fecha invalido o fecha de calendario inexistente (ej. 30/02/2026),22,3.55,Alta
+Completitud,precio,Precio faltante,21,3.39,Alta
+Unicidad,id_pedido (fila completa),Filas 100% duplicadas (todas las columnas identicas),20,3.23,Alta
+Exactitud,precio,Precio con valor negativo (imposible),19,3.06,Alta
+Validez,codigo_postal,No cumple el formato colombiano de 6 digitos (perdida de ceros a la izquierda),620,100.0,Media
+Oportunidad,fecha_actualizacion_stock,Stock desactualizado: mas de 90 dias de antiguedad respecto al 2026-08-04,67,10.81,Media
+Validez,correo,Formato de correo invalido (sin '@' o sin dominio),51,8.23,Media
+Completitud,nivel_satisfaccion,Nivel de satisfaccion faltante,46,7.42,Media
+Consistencia,ciudad / codigo_postal,codigo_postal inconsistente con la ciudad declarada,41,6.61,Media
+Exactitud,edad_cliente,Edad fuera de rango fisico valido (negativa o mayor a 100 anios),32,5.16,Media
+Completitud,ciudad,Ciudad faltante,31,5.0,Media
+Oportunidad,fecha_actualizacion_stock,"Fecha de actualizacion de stock futura (posterior a hoy, imposible)",21,3.39,Baja
