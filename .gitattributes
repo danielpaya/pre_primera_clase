@@ -1,3 +1,4 @@
 NovaMarket_datos_crudos.csv filter=lfs diff=lfs merge=lfs -text
 S04_PD_Pallares_DatasetImputacionInicial.csv filter=lfs diff=lfs merge=lfs -text
 S06_PD_Pallares_DatasetDepurado.csv filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
