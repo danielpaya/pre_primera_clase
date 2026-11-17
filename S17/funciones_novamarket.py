@@ -176,7 +176,13 @@ def _parsear_decimal(valor: Any) -> Any:
     if pd.isna(valor):
         return np.nan
     texto = str(valor).strip()
-    if "," in texto and "." not in texto:
+    if not texto:
+        return np.nan
+    # Con coma y punto a la vez, el punto es separador de miles: "1.234,5" -> 1234.5.
+    # Sin coma no se toca nada, para no convertir "12.345" en doce mil trescientos.
+    if "," in texto:
+        if "." in texto:
+            texto = texto.replace(".", "")
         texto = texto.replace(",", ".")
     try:
         return float(texto)
@@ -529,7 +535,8 @@ def limpiar_lote(df: pd.DataFrame) -> pd.DataFrame:
 
     for columna in ("precio_unitario", "unidades_vendidas", "edad_cliente", "peso_pedido_kg"):
         antes = lote[columna].copy()
-        if columna == "peso_pedido_kg":
+        # precio y peso pueden llegar con coma decimal desde otros sistemas.
+        if columna in ("peso_pedido_kg", "precio_unitario"):
             lote[columna] = pd.to_numeric(
                 lote[columna].map(_parsear_decimal), errors="coerce"
             ).astype("float64")
@@ -603,6 +610,7 @@ def limpiar_lote(df: pd.DataFrame) -> pd.DataFrame:
         f"monto negativo={int(monto_negativo.sum()):,}; "
         f"filas eliminadas (interseccion incluida)={int(eliminar.sum()):,}."
     )
+    filas_eliminadas_imposibles = int(eliminar.sum())
     lote = lote.loc[~eliminar].copy()
 
     precio = lote["precio_unitario"]
@@ -761,6 +769,10 @@ def limpiar_lote(df: pd.DataFrame) -> pd.DataFrame:
     lote["edad_cliente"] = lote["edad_cliente"].astype("Int64")
     if "fuga_cliente" in lote.columns:
         lote["fuga_cliente"] = lote["fuga_cliente"].astype("Int64")
+
+    # Conteos reales de la corrida, para que el acta no los estime restando tamanos.
+    lote.attrs["filas_eliminadas_imposibles"] = filas_eliminadas_imposibles
+    lote.attrs["duplicados_exactos_eliminados"] = duplicados
 
     if lote["id_pedido"].duplicated().any():
         raise AssertionError("La limpieza no dejo una fila por id_pedido.")
