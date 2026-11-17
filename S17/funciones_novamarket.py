@@ -53,6 +53,28 @@ def _normalizar_llave(valores: pd.Series) -> pd.Series:
     return valores.map(normalizar).astype("string")
 
 
+def _normalizar_nombres_columnas(df: pd.DataFrame) -> pd.DataFrame:
+    originales = list(df.columns)
+    normalizados = [str(columna).strip().casefold() for columna in originales]
+    if len(set(normalizados)) != len(normalizados):
+        raise ValueError(
+            "Hay nombres de columnas que colisionan al normalizar mayusculas y espacios."
+        )
+    lote = df.copy()
+    lote.columns = normalizados
+    alias_canal = "canal" in lote.columns
+    if alias_canal:
+        if "canal_compra" in lote.columns:
+            raise ValueError("El lote contiene tanto canal como canal_compra.")
+        lote = lote.rename(columns={"canal": "canal_compra"})
+    if originales != normalizados or alias_canal:
+        print(
+            f"Esquema de columnas normalizado: {len(originales):,} nombres; "
+            f"alias canal -> canal_compra aplicado={alias_canal}."
+        )
+    return lote
+
+
 def _normalizar_texto(valor: Any) -> Any:
     if pd.isna(valor):
         return pd.NA
@@ -150,6 +172,18 @@ def _parsear_moneda(valor: Any) -> Any:
         return np.nan
 
 
+def _parsear_decimal(valor: Any) -> Any:
+    if pd.isna(valor):
+        return np.nan
+    texto = str(valor).strip()
+    if "," in texto and "." not in texto:
+        texto = texto.replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return np.nan
+
+
 def _convertir_fecha(valores: pd.Series) -> pd.Series:
     texto = valores.astype("string").str.strip().str.lower()
     meses = {
@@ -171,9 +205,10 @@ def _convertir_fecha(valores: pd.Series) -> pd.Series:
     for nombre, numero in meses.items():
         texto = texto.str.replace(nombre, numero, regex=False)
     iso = pd.to_datetime(texto, format="%Y-%m-%d", errors="coerce")
+    iso_puntos = pd.to_datetime(texto, format="%Y.%m.%d", errors="coerce")
     dmy = pd.to_datetime(texto, format="%d/%m/%Y", errors="coerce")
     dmy_corto = pd.to_datetime(texto, format="%d/%m/%y", errors="coerce")
-    return iso.fillna(dmy).fillna(dmy_corto)
+    return iso.fillna(iso_puntos).fillna(dmy).fillna(dmy_corto)
 
 
 def auditar_lote_vs_semestre(
@@ -430,7 +465,7 @@ def _agregar_features(df: pd.DataFrame) -> pd.DataFrame:
     )
     df["rfm_score"] = pd.Series(
         recencia + frecuencia_score + monetario, index=df.index
-    ).where(frecuencia.notna())
+    ).where(frecuencia.notna()).astype("float64")
     return df
 
 
@@ -439,7 +474,7 @@ def limpiar_lote(df: pd.DataFrame) -> pd.DataFrame:
     if not isinstance(df, pd.DataFrame):
         raise TypeError("limpiar_lote espera un pandas.DataFrame.")
     referencia = _cargar_referencia()
-    lote = df.copy()
+    lote = _normalizar_nombres_columnas(df)
     filas_iniciales = len(lote)
     print(f"Lote crudo: {filas_iniciales:,} filas, {lote.shape[1]} columnas.")
 
@@ -494,7 +529,12 @@ def limpiar_lote(df: pd.DataFrame) -> pd.DataFrame:
 
     for columna in ("precio_unitario", "unidades_vendidas", "edad_cliente", "peso_pedido_kg"):
         antes = lote[columna].copy()
-        lote[columna] = pd.to_numeric(lote[columna], errors="coerce")
+        if columna == "peso_pedido_kg":
+            lote[columna] = pd.to_numeric(
+                lote[columna].map(_parsear_decimal), errors="coerce"
+            ).astype("float64")
+        else:
+            lote[columna] = pd.to_numeric(lote[columna], errors="coerce")
         _reportar_nulos_nuevos(columna, antes, lote[columna])
 
     antes = lote["monto_compra"].copy()
